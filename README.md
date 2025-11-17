@@ -2,6 +2,10 @@
 
 Sistem rekomendasi draft pick untuk Mobile Legends: Bang Bang menggunakan Prolog sebagai knowledge-based system.
 
+![Mobile Legends](assets/mlbb.jpg)
+
+![Draft Pick](assets/draft_pick.png)
+
 ## Table of Contents
 - [Struktur Project](#struktur-project)
 - [Fitur Sistem](#fitur-sistem)
@@ -10,6 +14,10 @@ Sistem rekomendasi draft pick untuk Mobile Legends: Bang Bang menggunakan Prolog
 - [Knowledge Base](#knowledge-base)
 - [References](#references)
 - [Authors](#authors)
+
+## Quick Links
+- **[CLI Quick Start Guide](CLI_GUIDE.md)** - Panduan lengkap penggunaan Command Line Interface
+- **[Interactive Demo](main.pl)** - Demo sistem dengan contoh preset
 
 ## Struktur Project
 
@@ -24,6 +32,8 @@ mobile-legends-draftpick-kbs/
 │   ├── compatible.pl        # Kompatibilitas antar hero
 │   └── counter.pl           # Counter relationship antar hero
 ├── draft_system.pl          # Sistem utama draft pick
+├── cli.pl                   # Command Line Interface
+├── main.pl                  # Interface demo dan testing
 ├── test_system.pl           # File test untuk mencoba sistem
 └── README.md               # Dokumentasi ini
 ```
@@ -69,9 +79,38 @@ mobile-legends-draftpick-kbs/
 - **Jungle Tank/Fighter → Roam Support**: Tank/Fighter jungle butuh sustain dan utility
 - Bonus prioritas +15 untuk kombinasi yang cocok
 
+#### Anti-Duplicate Lane Validation
+- **Lane Uniqueness**: Sistem mencegah duplikasi lane dalam satu tim
+- **Automatic Filtering**: Hero yang akan menyebabkan duplikasi lane otomatis difilter
+- **Real-time Validation**: Analisis tim mendeteksi lane yang duplikat
+- **Penalty System**: -50 poin penalti untuk hero yang menyebabkan duplikasi (safety measure)
+
 ## Cara Menggunakan Sistem
 
-### 1. Menjalankan Test
+### 1. Command Line Interface (CLI)
+```bash
+# Jalankan CLI interaktif
+swipl -s cli.pl -g "start_cli."
+
+# Atau manual start setelah load
+swipl -s cli.pl
+?- start_cli.
+```
+
+**Fitur CLI:**
+- **Draft Pick Recommendation**: Input banned heroes, enemy picks, team picks, dan lane untuk mendapat rekomendasi
+- **Team Analysis**: Analisis komposisi tim secara detail
+- **Hero Info**: Informasi lengkap tentang hero (roles, lanes, counters, synergies)
+- **User-friendly Interface**: Menu interaktif dengan validasi input
+
+**Cara Menggunakan CLI:**
+1. Pilih mode (1-4)
+2. Ikuti instruksi input:
+   - Format hero list: `[hero1, hero2, hero3]` atau `[]` untuk kosong
+   - Format lane: `gold`, `mid`, `exp`, `jungle`, atau `roam`
+3. Sistem akan memberikan rekomendasi dan analisis
+
+### 2. Menjalankan Test
 ```prolog
 % Load file test
 ?- [test_system].
@@ -96,7 +135,64 @@ mobile-legends-draftpick-kbs/
 ?- draft_recommendation([johnson, akai, estes], [hayabusa, eudora, layla], [tigreal, harith], exp, Result).
 ```
 
-### 3. Contoh Query dan Expected Output
+### 3. Contoh Penggunaan CLI
+
+#### CLI Session Example
+```
+===============================================================
+           MOBILE LEGENDS DRAFT PICK SYSTEM               
+                    Command Line Interface                 
+===============================================================
+
+Pilih mode:
+1. Draft Pick Recommendation
+2. Team Analysis  
+3. Hero Info
+4. Exit
+Pilihan (1-4): 1
+
+===============================================================
+                DRAFT PICK RECOMMENDATION
+===============================================================
+
+STEP 1: Masukkan hero yang di-ban
+Format: [hero1, hero2, hero3] atau [] jika kosong
+Contoh: [fanny, johnson, akai]
+Banned heroes: [fanny, johnson].
+
+STEP 2: Masukkan hero yang sudah dipick musuh (0-5 hero)
+Format: [hero1, hero2] atau [] jika kosong
+Enemy heroes: [layla, eudora].
+
+STEP 3: Masukkan hero yang sudah dipick tim (0-4 hero)
+Format: [hero1, hero2] atau [] jika kosong
+Team heroes: [].
+
+STEP 4: Pilih lane yang ingin dimainkan
+Pilihan: gold, mid, exp, jungle, roam
+Lane: jungle.
+
+===============================================================
+                    HASIL REKOMENDASI
+===============================================================
+
+RINGKASAN INPUT:
+   Banned Heroes: [fanny,johnson]
+   Enemy Heroes:  [layla,eudora]
+   Team Heroes:   []
+   Your Lane:     jungle
+
+HERO RECOMMENDATIONS:
+   Rank | Hero          | Priority | Roles
+   -----|---------------|----------|----------------
+   1.   | saber         | 45       | [assassin]
+   2.   | karina        | 38       | [assassin,mage]
+   3.   | hayabusa      | 35       | [assassin]
+   4.   | ling          | 33       | [assassin]
+   5.   | lancelot      | 30       | [assassin]
+```
+
+### 4. Contoh Query Manual dan Expected Output
 
 #### First Pick Example
 ```prolog
@@ -142,6 +238,25 @@ Result = draft_analysis(
     [hero_priority(saber, 45), hero_priority(karina, 38), ...],
     team_analysis([tank-0, fighter-0, ...], [tank, fighter, marksman], unbalanced),
     [threat(layla, [saber, karina, ...]), threat(eudora, [saber, karina, ...])]
+).
+```
+
+#### Anti-Duplicate Lane Example
+```prolog
+% Tim sudah ada Layla (gold lane), coba pick gold lagi
+?- draft_recommendation([], [], [layla], gold, Result).
+Result = draft_analysis(
+    [],  % Empty recommendations - tidak ada hero yang bisa dipick
+    team_analysis([...], [...], 1, [jungle,roam,mid,exp], balanced, valid, [], valid),
+    []
+).
+
+% Tim ada Layla (gold), pick lane berbeda -> OK
+?- draft_recommendation([], [], [layla], roam, Result).
+Result = draft_analysis(
+    [hero_priority(tigreal, 52), hero_priority(franco, 50), ...],  % Ada rekomendasi
+    ...,
+    ...
 ).
 ```
 
