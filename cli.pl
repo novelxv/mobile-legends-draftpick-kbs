@@ -11,10 +11,10 @@ start_cli :-
 
 % Banner dan header
 show_banner :-
-    write('╔═══════════════════════════════════════════════════════════╗'), nl,
-    write('║           MOBILE LEGENDS DRAFT PICK SYSTEM               ║'), nl,
-    write('║                    Command Line Interface                 ║'), nl,
-    write('╚═══════════════════════════════════════════════════════════╝'), nl,
+    write('==============================================================='), nl,
+    write('           MOBILE LEGENDS DRAFT PICK SYSTEM               '), nl,
+    write('                    Command Line Interface                 '), nl,
+    write('==============================================================='), nl,
     nl.
 
 % Clear screen
@@ -49,9 +49,9 @@ handle_menu_choice(_) :-
 
 draft_pick_mode :-
     nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     write('                DRAFT PICK RECOMMENDATION'), nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     nl,
     
     % Input banned heroes
@@ -144,9 +144,9 @@ draft_pick_mode :-
 
 % Process and display draft recommendation
 process_draft_recommendation(BannedHeroes, EnemyHeroes, TeamHeroes, UserLane) :-
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     write('                    HASIL REKOMENDASI'), nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     nl,
     
     % Show input summary
@@ -296,9 +296,9 @@ show_additional_analysis(_BannedHeroes, EnemyHeroes, TeamHeroes, _UserLane) :-
 
 team_analysis_mode :-
     nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     write('                     TEAM ANALYSIS'), nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     nl,
     
     write('Masukkan komposisi tim untuk dianalisis:'), nl,
@@ -321,7 +321,7 @@ team_analysis_mode :-
 display_detailed_team_analysis(Team, team_analysis(RoleCounts, LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, DuplicatedLanes, LaneValidation)) :-
     nl,
     write('DETAILED TEAM ANALYSIS'), nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     
     write('Team: '), write(Team), nl,
     length(Team, Size),
@@ -399,9 +399,9 @@ give_team_recommendations(Team, RoleDiversity, DamageBalance, MissingLanes, Dupl
 
 hero_info_mode :-
     nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     write('                       HERO INFO'), nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     nl,
     
     write('Masukkan nama hero untuk melihat informasi detail:'), nl,
@@ -422,7 +422,7 @@ hero_info_mode :-
 display_hero_info(Hero) :-
     nl,
     write('HERO INFORMATION: '), write(Hero), nl,
-    write('═══════════════════════════════════════════════════════════'), nl,
+    write('==============================================================='), nl,
     
     write('Roles: '),
     findall(Role, memiliki_role(Hero, Role), Roles),
