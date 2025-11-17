@@ -49,6 +49,21 @@ adds_role_diversity(Hero, Team) :-
     memiliki_role(Hero, Role),
     \+ (member(TeamMate, Team), memiliki_role(TeamMate, Role)).
 
+% Cek apakah hero akan menyebabkan duplikasi lane
+would_duplicate_lane(Hero, Team, UserLane) :-
+    memiliki_lane(Hero, UserLane),
+    member(TeamMate, Team),
+    memiliki_lane(TeamMate, UserLane).
+
+% Cek apakah penambahan hero valid (tidak duplikasi lane)
+valid_lane_addition(Hero, Team, UserLane) :-
+    \+ would_duplicate_lane(Hero, Team, UserLane).
+
+% Hitung jumlah hero yang sudah mengisi lane tertentu
+count_heroes_in_lane(Lane, Team, Count) :-
+    findall(Hero, (member(Hero, Team), memiliki_lane(Hero, Lane)), Heroes),
+    length(Heroes, Count).
+
 % Hitung skor fleksibilitas hero (berdasarkan jumlah role dan lane)
 flexibility_score(Hero, FlexScore) :-
     hero(Hero),
@@ -152,6 +167,7 @@ recommend_first_pick(Hero, BannedHeroes, EnemyHeroes, TeamHeroes, UserLane) :-
 recommend_hero(Hero, BannedHeroes, EnemyHeroes, TeamHeroes, UserLane, Priority) :-
     hero_tersedia(Hero, BannedHeroes, EnemyHeroes, TeamHeroes),
     memiliki_lane(Hero, UserLane),
+    valid_lane_addition(Hero, TeamHeroes, UserLane),
     calculate_priority(Hero, EnemyHeroes, TeamHeroes, UserLane, Priority).
 
 % Kalkulasi prioritas hero berdasarkan berbagai faktor
@@ -181,8 +197,11 @@ calculate_priority(Hero, EnemyHeroes, TeamHeroes, UserLane, Priority) :-
     flexibility_score(Hero, FlexScore),
     FlexibilityBonus is FlexScore * 2,
     
+    % Penalti untuk duplikasi lane (safety check)
+    (would_duplicate_lane(Hero, TeamHeroes, UserLane) -> DuplicationPenalty = -50; DuplicationPenalty = 0),
+    
     % Total priority
-    Priority is BasePriority + CounterBonus + LaneBonus + RoleDiversityBonus + JungleRoamBonus + SynergyBonus + DamageBonus + FlexibilityBonus.
+    Priority is BasePriority + CounterBonus + LaneBonus + RoleDiversityBonus + JungleRoamBonus + SynergyBonus + DamageBonus + FlexibilityBonus + DuplicationPenalty.
 
 % Helper untuk bonus role diversity
 check_role_diversity_bonus(Hero, TeamHeroes, Bonus) :-
@@ -279,9 +298,11 @@ analyze_team_composition(Team, Analysis) :-
     findall(Lane-Count, (lane(Lane), count_lane_in_team(Lane, Team, Count)), LaneCounts),
     count_unique_roles(Team, RoleDiversity),
     findall(Lane, (lane(Lane), lane_dibutuhkan(Lane, Team)), MissingLanes),
+    findall(Lane, (lane(Lane), count_heroes_in_lane(Lane, Team, Count), Count > 1), DuplicatedLanes),
     (has_damage_balance(Team) -> DamageBalance = balanced; DamageBalance = unbalanced),
     (valid_jungle_roam_combination(Team) -> JungleRoamValid = valid; JungleRoamValid = invalid),
-    Analysis = team_analysis(RoleCounts, LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid).
+    (DuplicatedLanes = [] -> LaneValidation = valid; LaneValidation = invalid),
+    Analysis = team_analysis(RoleCounts, LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, DuplicatedLanes, LaneValidation).
 
 % Analisis threat dari tim musuh
 analyze_enemy_threats(EnemyHeroes, Threats) :-
