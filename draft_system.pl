@@ -71,10 +71,14 @@ good_synergy_with_team(Hero, Team) :-
 
 % Cek keseimbangan damage type
 has_damage_balance(Team) :-
-    (   (member(H1, Team), memiliki_damage_type(H1, physical)) ->
-        (member(H2, Team), memiliki_damage_type(H2, magic))
-    ;   true
-).
+    length(Team, Len),
+    Len =< 1,
+    !.
+has_damage_balance(Team) :-
+    member(H1, Team), 
+    memiliki_damage_type(H1, physical),
+    member(H2, Team), 
+    memiliki_damage_type(H2, magic).
 
 % Cek hero jungle dalam tim
 get_jungle_hero(Team, JungleHero) :-
