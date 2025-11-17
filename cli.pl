@@ -96,15 +96,17 @@ draft_pick_mode :-
     nl,
     % Input team heroes
     write('STEP 3: Masukkan hero yang sudah dipick tim (0-4 hero)'), nl,
-    write('Format: [hero1, hero2] atau [] jika kosong'), nl,
+    write('Format: [hero1-lane1, hero2-lane2] atau [hero1, hero2] atau [] jika kosong'), nl,
+    write('Contoh: [kimmy-mid, esmeralda-exp] atau [tigreal-roam, harith-mid]'), nl,
     write('Team heroes: '),
     read(TeamHeroes),
     
-    % Validate team heroes
-    (validate_hero_list(TeamHeroes) -> 
+    % Validate team heroes (support hero-lane format)
+    (validate_hero_lane_list(TeamHeroes) -> 
         true 
     ; 
         write('Error: Ada hero yang tidak valid dalam team list.'), nl,
+        write('Format yang benar: [hero1-lane1, hero2-lane2] atau [hero1, hero2]'), nl,
         draft_pick_mode
     ),
     
@@ -302,11 +304,12 @@ team_analysis_mode :-
     nl,
     
     write('Masukkan komposisi tim untuk dianalisis:'), nl,
-    write('Format: [hero1, hero2, hero3, hero4, hero5]'), nl,
+    write('Format: [hero1-lane1, hero2-lane2, hero3-lane3, hero4-lane4, hero5-lane5]'), nl,
+    write('Contoh: [kimmy-mid, esmeralda-exp, tigreal-roam, granger-gold, hayabusa-jungle]'), nl,
     write('Tim: '),
     read(Team),
     
-    (validate_hero_list(Team) ->
+    (validate_hero_lane_list(Team) ->
         (analyze_team_composition(Team, Analysis),
          display_detailed_team_analysis(Team, Analysis))
     ;
@@ -325,7 +328,9 @@ display_detailed_team_analysis(Team, team_analysis(RoleCounts, LaneCounts, RoleD
     
     write('Team: '), write(Team), nl,
     length(Team, Size),
-    write('Size: '), write(Size), write('/5 heroes'), nl, nl,
+    write('Size: '), write(Size), write('/5 heroes'), nl,
+    write('Lane Assignments:'), nl,
+    display_team_lane_assignments(Team), nl,
     
     write('ROLE DISTRIBUTION:'), nl,
     display_role_counts(RoleCounts),
@@ -477,3 +482,22 @@ validate_hero_list([]).
 validate_hero_list([Hero|Rest]) :-
     hero(Hero),
     validate_hero_list(Rest).
+
+% Validasi untuk format hero-lane
+validate_hero_lane_list([]).
+validate_hero_lane_list([Hero-Lane|Rest]) :-
+    hero(Hero),
+    lane(Lane),
+    validate_hero_lane_list(Rest).
+validate_hero_lane_list([Hero|Rest]) :-
+    hero(Hero),
+    validate_hero_lane_list(Rest).
+
+% Display lane assignments tim
+display_team_lane_assignments([]).
+display_team_lane_assignments([Hero-Lane|Rest]) :-
+    format('   ~w -> ~w~n', [Hero, Lane]),
+    display_team_lane_assignments(Rest).
+display_team_lane_assignments([Hero|Rest]) :-
+    format('   ~w -> (lane tidak dispesifikasi)~n', [Hero]),
+    display_team_lane_assignments(Rest).

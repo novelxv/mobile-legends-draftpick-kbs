@@ -16,7 +16,8 @@ hero_tersedia(Hero, BannedHeroes, EnemyHeroes, TeamHeroes) :-
     hero(Hero),
     \+ member(Hero, BannedHeroes),
     \+ member(Hero, EnemyHeroes),
-    \+ member(Hero, TeamHeroes).
+    extract_all_heroes(TeamHeroes, TeamHeroList),
+    \+ member(Hero, TeamHeroList).
 
 % Hitung jumlah hero per role dalam tim
 count_role_in_team(Role, Team, Count) :-
@@ -30,7 +31,7 @@ count_lane_in_team(Lane, Team, Count) :-
 
 % Cek apakah lane sudah terpenuhi dalam tim (minimal 1)
 lane_terpenuhi(Lane, Team) :-
-    count_lane_in_team(Lane, Team, Count),
+    count_specified_lane_in_team(Lane, Team, Count),
     Count > 0.
 
 % Cek apakah tim kekurangan lane tertentu
@@ -40,19 +41,85 @@ lane_dibutuhkan(Lane, Team) :-
 
 % Hitung jumlah role yang berbeda dalam tim
 count_unique_roles(Team, UniqueRoleCount) :-
-    findall(Role, (member(Hero, Team), memiliki_role(Hero, Role)), AllRoles),
+    findall(Role, (
+        member(HeroLane, Team),
+        extract_hero(HeroLane, Hero),
+        memiliki_role(Hero, Role)
+    ), AllRoles),
     sort(AllRoles, UniqueRoles),
     length(UniqueRoles, UniqueRoleCount).
 
 % Cek apakah hero menambah diversity role ke tim
 adds_role_diversity(Hero, Team) :-
     memiliki_role(Hero, Role),
-    \+ (member(TeamMate, Team), memiliki_role(TeamMate, Role)).
+    \+ (member(TeamMateLane, Team), 
+        extract_hero(TeamMateLane, TeamMate),
+        memiliki_role(TeamMate, Role)).
+
+% ===== HERO-LANE FORMAT UTILITIES =====
+
+% Extract hero dari format hero-lane
+extract_hero(Hero-_Lane, Hero) :- !.
+extract_hero(Hero, Hero).
+
+% Extract lane dari format hero-lane
+extract_lane(Hero-Lane, Hero, Lane) :- !.
+extract_lane(Hero, Hero, _) :- 
+    % Jika tidak ada spesifikasi lane, kita tidak bisa tentukan
+    fail.
+
+% Extract semua hero dari list (dengan atau tanpa lane specification)
+extract_all_heroes([], []).
+extract_all_heroes([HeroLane|Rest], [Hero|HeroRest]) :-
+    extract_hero(HeroLane, Hero),
+    extract_all_heroes(Rest, HeroRest).
+
+% Cek apakah hero sudah dipick dengan spesifikasi lane
+hero_already_picked_in_lane(Hero, Lane, Team) :-
+    member(Hero-Lane, Team), !.
+hero_already_picked_in_lane(Hero, _Lane, Team) :-
+    member(Hero, Team).
+
+% Update count functions untuk hero-lane format
+count_role_in_team_v2(Role, Team, Count) :-
+    findall(Hero, (
+        member(HeroLane, Team),
+        extract_hero(HeroLane, Hero),
+        memiliki_role(Hero, Role)
+    ), RoleHeroes),
+    length(RoleHeroes, Count).
+
+% Count lane dengan spesifikasi yang tepat
+count_specified_lane_in_team(Lane, Team, Count) :-
+    findall(Hero, (
+        member(Hero-SpecifiedLane, Team),
+        SpecifiedLane = Lane
+    ), LaneHeroes),
+    length(LaneHeroes, Count).
+
+% Fallback untuk hero tanpa spesifikasi lane
+count_lane_in_team_v2(Lane, Team, Count) :-
+    % Hitung hero dengan spesifikasi lane yang jelas
+    count_specified_lane_in_team(Lane, Team, SpecifiedCount),
+    % Hitung hero tanpa spesifikasi yang bisa main di lane ini
+    findall(Hero, (
+        member(Hero, Team),
+        \+ (member(Hero-_, Team)), % Hero tanpa spesifikasi lane
+        memiliki_lane(Hero, Lane)
+    ), UnspecifiedHeroes),
+    length(UnspecifiedHeroes, UnspecifiedCount),
+    Count is SpecifiedCount + UnspecifiedCount.
 
 % Cek apakah hero akan menyebabkan duplikasi lane
 would_duplicate_lane(Hero, Team, UserLane) :-
     memiliki_lane(Hero, UserLane),
+    % Cek apakah ada hero yang sudah assigned ke lane ini
+    member(_TeamMate-UserLane, Team).
+    
+would_duplicate_lane_old(Hero, Team, UserLane) :-
+    memiliki_lane(Hero, UserLane),
     member(TeamMate, Team),
+    \+ (member(TeamMate-_, Team)), % Hero tanpa spesifikasi lane
     memiliki_lane(TeamMate, UserLane).
 
 % Cek apakah penambahan hero valid (tidak duplikasi lane)
@@ -61,8 +128,8 @@ valid_lane_addition(Hero, Team, UserLane) :-
 
 % Hitung jumlah hero yang sudah mengisi lane tertentu
 count_heroes_in_lane(Lane, Team, Count) :-
-    findall(Hero, (member(Hero, Team), memiliki_lane(Hero, Lane)), Heroes),
-    length(Heroes, Count).
+    % Prioritas: hitung hero dengan spesifikasi lane yang jelas
+    count_specified_lane_in_team(Lane, Team, Count).
 
 % Hitung skor fleksibilitas hero (berdasarkan jumlah role dan lane)
 flexibility_score(Hero, FlexScore) :-
@@ -97,12 +164,17 @@ has_damage_balance(Team) :-
 
 % Cek hero jungle dalam tim
 get_jungle_hero(Team, JungleHero) :-
+    member(JungleHero-jungle, Team), !.
+get_jungle_hero(Team, JungleHero) :-
     member(JungleHero, Team),
+    \+ (member(JungleHero-_, Team)), % Hero tanpa spesifikasi lane
     memiliki_lane(JungleHero, jungle).
 
-% Cek hero roam dalam tim  
+% Cek hero roam dalam tim
+    member(RoamHero-roam, Team), !.
 get_roam_hero(Team, RoamHero) :-
     member(RoamHero, Team),
+    \+ (member(RoamHero-_, Team)),
     memiliki_lane(RoamHero, roam).
 
 % Rules: Kalau jungle assassin, roam tank
@@ -167,7 +239,7 @@ recommend_first_pick(Hero, BannedHeroes, EnemyHeroes, TeamHeroes, UserLane) :-
 recommend_hero(Hero, BannedHeroes, EnemyHeroes, TeamHeroes, UserLane, Priority) :-
     hero_tersedia(Hero, BannedHeroes, EnemyHeroes, TeamHeroes),
     memiliki_lane(Hero, UserLane),
-    valid_lane_addition(Hero, TeamHeroes, UserLane),
+    valid_lane_addition(Hero, TeamHeroes, UserLane),  % Validasi anti-duplikasi lane
     calculate_priority(Hero, EnemyHeroes, TeamHeroes, UserLane, Priority).
 
 % Kalkulasi prioritas hero berdasarkan berbagai faktor
@@ -294,8 +366,8 @@ take_top_n(List, N, TopN) :-
 
 % Analisis komposisi tim saat ini
 analyze_team_composition(Team, Analysis) :-
-    findall(Role-Count, (role(Role), count_role_in_team(Role, Team, Count)), RoleCounts),
-    findall(Lane-Count, (lane(Lane), count_lane_in_team(Lane, Team, Count)), LaneCounts),
+    findall(Role-Count, (role(Role), count_role_in_team_v2(Role, Team, Count)), RoleCounts),
+    findall(Lane-Count, (lane(Lane), count_specified_lane_in_team(Lane, Team, Count)), LaneCounts),
     count_unique_roles(Team, RoleDiversity),
     findall(Lane, (lane(Lane), lane_dibutuhkan(Lane, Team)), MissingLanes),
     findall(Lane, (lane(Lane), count_heroes_in_lane(Lane, Team, Count), Count > 1), DuplicatedLanes),

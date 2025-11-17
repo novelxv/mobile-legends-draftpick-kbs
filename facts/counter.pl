@@ -313,7 +313,7 @@ iscounter(fredrinn,yin).
 iscounter(badang,yin).
 iscounter(karina,floryn).
 iscounter(saber,floryn).
-iscounter(hanabi,edith)
+iscounter(hanabi,edith).
 iscounter(wanwan,edith).
 iscounter(hayabusa,valentina).
 iscounter(natalia,valentina).
