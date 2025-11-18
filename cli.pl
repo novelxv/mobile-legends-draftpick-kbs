@@ -551,12 +551,3 @@ validate_hero_lane_list([Hero-Lane|Rest]) :-
 validate_hero_lane_list([Hero|Rest]) :-
     hero(Hero),
     validate_hero_lane_list(Rest).
-
-% Display lane assignments tim
-display_team_lane_assignments([]).
-display_team_lane_assignments([Hero-Lane|Rest]) :-
-    format('   ~w -> ~w~n', [Hero, Lane]),
-    display_team_lane_assignments(Rest).
-display_team_lane_assignments([Hero|Rest]) :-
-    format('   ~w -> (lane tidak dispesifikasi)~n', [Hero]),
-    display_team_lane_assignments(Rest).
