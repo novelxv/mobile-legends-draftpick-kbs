@@ -4,7 +4,7 @@ Sistem rekomendasi draft pick untuk Mobile Legends: Bang Bang menggunakan Prolog
 
 ![Mobile Legends](assets/mlbb.jpg)
 
-![Draft Pick](assets/draft_pick.png)
+![Draft Pick](assets/draft_pick.jpg)
 
 ## Table of Contents
 - [Struktur Project](#struktur-project)
