@@ -25,7 +25,7 @@ has_specialty(hilda,regen).
 has_specialty(khaleed,regen).
 has_specialty(lukas,regen).
 has_specialty(phoveus,regen).
-has_specialty(rafeala,regen).
+has_specialty(rafaela,regen).
 has_specialty(ruby,regen).
 has_specialty(uranus,regen).
 has_specialty(x_borg,regen).
@@ -82,7 +82,7 @@ has_specialty(yi_sun_shin,finisher).
 has_specialty(alice,charge).
 has_specialty(alpha,charge).
 has_specialty(argus,charge).
-has_specialty(arlotta,charge).
+has_specialty(arlott,charge).
 has_specialty(badang,charge).
 has_specialty(dyrroth,charge).
 has_specialty(faramis,charge).
