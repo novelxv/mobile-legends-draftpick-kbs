@@ -211,7 +211,7 @@ display_recommendations_numbered([hero_priority(Hero, Priority)|Rest], Num) :-
     display_recommendations_numbered(Rest, Num1).
 
 % Display team analysis
-display_team_analysis(team_analysis(_RoleCounts, _LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, DuplicatedLanes, LaneValidation), TeamHeroes) :-
+display_team_analysis(team_analysis(_RoleCounts, _LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, LaneValidationResult), TeamHeroes) :-
     write('   Role Diversity: '), write(RoleDiversity), write('/6'), nl,
     
     write('   Missing Lanes: '),
@@ -225,16 +225,41 @@ display_team_analysis(team_analysis(_RoleCounts, _LaneCounts, RoleDiversity, Mis
     
     write('   Jungle-Roam Combo: '), write(JungleRoamValid), nl,
     
-    write('   Lane Validation: '), write(LaneValidation),
-    (LaneValidation = invalid ->
-        (write(' (Duplicated: '), write(DuplicatedLanes), write(')'))
-    ;
-        true
-    ), nl,
+    % Display detailed lane validation
+    display_lane_validation_details(LaneValidationResult),
     
     % Show current team composition
     length(TeamHeroes, TeamSize),
     write('   Team Size: '), write(TeamSize), write('/5'), nl.
+
+% Display lane validation details
+display_lane_validation_details(lane_validation(valid, [], [])) :-
+    write('   Lane Validation: VALID'), nl.
+
+display_lane_validation_details(lane_validation(invalid, DuplicatedLanes, InvalidAssignments)) :-
+    write('   Lane Validation: INVALID'), nl,
+    
+    % Show duplicated lanes
+    (DuplicatedLanes \= [] ->
+        (write('     - Duplicated Lanes: '), write(DuplicatedLanes), nl)
+    ;
+        true
+    ),
+    
+    % Show invalid hero-lane assignments
+    (InvalidAssignments \= [] ->
+        (write('     - Invalid Assignments: '), 
+         display_invalid_assignments(InvalidAssignments), nl)
+    ;
+        true
+    ).
+
+% Display invalid assignments with explanations
+display_invalid_assignments([]).
+display_invalid_assignments([Hero-Lane|Rest]) :-
+    write(Hero), write(' cannot play '), write(Lane),
+    (Rest \= [] -> write(', ') ; true),
+    display_invalid_assignments(Rest).
 
 % Display enemy threats
 display_enemy_threats([]) :-
@@ -321,7 +346,7 @@ team_analysis_mode :-
     get_char(_),
     main_menu.
 
-display_detailed_team_analysis(Team, team_analysis(RoleCounts, LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, DuplicatedLanes, LaneValidation)) :-
+display_detailed_team_analysis(Team, team_analysis(RoleCounts, LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, LaneValidationResult)) :-
     nl,
     write('DETAILED TEAM ANALYSIS'), nl,
     write('==============================================================='), nl,
@@ -344,22 +369,18 @@ display_detailed_team_analysis(Team, team_analysis(RoleCounts, LaneCounts, RoleD
     write('   Role Diversity: '), write(RoleDiversity), write('/6'), nl,
     write('   Damage Balance: '), write(DamageBalance), nl,
     write('   Jungle-Roam Combo: '), write(JungleRoamValid), nl,
-    write('   Lane Validation: '), write(LaneValidation), nl,
+    
+    % Display detailed lane validation
+    display_lane_validation_details(LaneValidationResult),
     
     (MissingLanes \= [] ->
         (write('   Missing Lanes: '), write(MissingLanes), nl)
     ;
         write('   Missing Lanes: None'), nl
-    ),
-    
-    (DuplicatedLanes \= [] ->
-        (write('   Duplicated Lanes: '), write(DuplicatedLanes), nl)
-    ;
-        write('   Duplicated Lanes: None'), nl
     ), nl,
     
     write('RECOMMENDATIONS:'), nl,
-    give_team_recommendations(Team, RoleDiversity, DamageBalance, MissingLanes, DuplicatedLanes).
+    give_team_recommendations(Team, RoleDiversity, DamageBalance, MissingLanes, LaneValidationResult).
 
 display_role_counts([]).
 display_role_counts([Role-Count|Rest]) :-
@@ -371,7 +392,7 @@ display_lane_counts([Lane-Count|Rest]) :-
     format('   ~w: ~w heroes~n', [Lane, Count]),
     display_lane_counts(Rest).
 
-give_team_recommendations(Team, RoleDiversity, DamageBalance, MissingLanes, DuplicatedLanes) :-
+give_team_recommendations(Team, RoleDiversity, DamageBalance, MissingLanes, LaneValidationResult) :-
     length(Team, Size),
     (Size < 5 ->
         write('   Tim belum lengkap, pertimbangkan:'), nl,
@@ -394,11 +415,49 @@ give_team_recommendations(Team, RoleDiversity, DamageBalance, MissingLanes, Dupl
         write('   Tim sudah lengkap (5 heroes)'), nl
     ),
     
+    % Check lane validation issues
+    give_lane_validation_recommendations(LaneValidationResult).
+
+% Give recommendations based on lane validation issues
+give_lane_validation_recommendations(lane_validation(valid, [], [])) :-
+    true.  % No issues, no recommendations needed
+
+give_lane_validation_recommendations(lane_validation(invalid, DuplicatedLanes, InvalidAssignments)) :-
     (DuplicatedLanes \= [] ->
-        write('   Ada duplikasi lane yang perlu diperbaiki'), nl
+        (write('   Ada duplikasi lane yang perlu diperbaiki: '), 
+         write(DuplicatedLanes), nl)
+    ;
+        true
+    ),
+    (InvalidAssignments \= [] ->
+        (write('   Hero tidak sesuai dengan lane assignment:'), nl,
+         display_invalid_assignment_warnings(InvalidAssignments))
     ;
         true
     ).
+
+% Display warnings for invalid assignments
+display_invalid_assignment_warnings([]).
+display_invalid_assignment_warnings([Hero-Lane|Rest]) :-
+    format('      - ~w tidak bisa main di ~w lane~n', [Hero, Lane]),
+    display_invalid_assignment_warnings(Rest).
+
+% Display team lane assignments
+display_team_lane_assignments([]).
+display_team_lane_assignments([Hero-Lane|Rest]) :-
+    format('   ~w -> ~w', [Hero, Lane]),
+    % Check if assignment is valid
+    (memiliki_lane(Hero, Lane) ->
+        write(' ✓')
+    ;
+        write(' (Invalid)')
+    ), nl,
+    display_team_lane_assignments(Rest).
+
+display_team_lane_assignments([Hero|Rest]) :-
+    % Handle hero without lane specification
+    format('   ~w -> (no lane specified)~n', [Hero]),
+    display_team_lane_assignments(Rest).
 
 % ===== HERO INFO MODE =====
 

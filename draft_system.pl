@@ -129,6 +129,37 @@ count_heroes_in_lane(Lane, Team, Count) :-
     % Prioritas: hitung hero dengan spesifikasi lane yang jelas
     count_specified_lane_in_team(Lane, Team, Count).
 
+% Validasi apakah hero bisa main di lane yang dispesifikasi
+valid_hero_lane_assignment(Hero, Lane) :-
+    memiliki_lane(Hero, Lane).
+
+% Cek hero yang tidak sesuai dengan lane assignment
+check_invalid_lane_assignments(Team, InvalidAssignments) :-
+    findall(
+        Hero-Lane,
+        (
+            member(Hero-Lane, Team),
+            \+ valid_hero_lane_assignment(Hero, Lane)
+        ),
+        InvalidAssignments
+    ).
+
+% Comprehensive lane validation
+comprehensive_lane_validation(Team, ValidationResult) :-
+    % Cek duplikasi
+    findall(Lane, (lane(Lane), count_heroes_in_lane(Lane, Team, Count), Count > 1), DuplicatedLanes),
+    
+    % Cek invalid assignments
+    check_invalid_lane_assignments(Team, InvalidAssignments),
+    
+    % Tentukan status validasi
+    (
+        DuplicatedLanes = [], InvalidAssignments = [] ->
+        ValidationResult = lane_validation(valid, [], [])
+    ;
+        ValidationResult = lane_validation(invalid, DuplicatedLanes, InvalidAssignments)
+    ).
+
 % Hitung skor fleksibilitas hero (berdasarkan jumlah role dan lane)
 flexibility_score(Hero, FlexScore) :-
     hero(Hero),
@@ -378,11 +409,10 @@ analyze_team_composition(Team, Analysis) :-
     findall(Lane-Count, (lane(Lane), count_specified_lane_in_team(Lane, Team, Count)), LaneCounts),
     count_unique_roles(Team, RoleDiversity),
     findall(Lane, (lane(Lane), lane_dibutuhkan(Lane, Team)), MissingLanes),
-    findall(Lane, (lane(Lane), count_heroes_in_lane(Lane, Team, Count), Count > 1), DuplicatedLanes),
     (has_damage_balance(Team) -> DamageBalance = balanced; DamageBalance = unbalanced),
     (valid_jungle_roam_combination(Team) -> JungleRoamValid = valid; JungleRoamValid = invalid),
-    (DuplicatedLanes = [] -> LaneValidation = valid; LaneValidation = invalid),
-    Analysis = team_analysis(RoleCounts, LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, DuplicatedLanes, LaneValidation).
+    comprehensive_lane_validation(Team, LaneValidationResult),
+    Analysis = team_analysis(RoleCounts, LaneCounts, RoleDiversity, MissingLanes, DamageBalance, JungleRoamValid, LaneValidationResult).
 
 % Analisis threat dari tim musuh
 analyze_enemy_threats(EnemyHeroes, Threats) :-
