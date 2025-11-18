@@ -21,13 +21,11 @@ hero_tersedia(Hero, BannedHeroes, EnemyHeroes, TeamHeroes) :-
 
 % Hitung jumlah hero per role dalam tim
 count_role_in_team(Role, Team, Count) :-
-    findall(Hero, (member(Hero, Team), memiliki_role(Hero, Role)), RoleHeroes),
-    length(RoleHeroes, Count).
+    count_role_in_team_v2(Role, Team, Count).
 
 % Hitung jumlah hero per lane dalam tim
 count_lane_in_team(Lane, Team, Count) :-
-    findall(Hero, (member(Hero, Team), memiliki_lane(Hero, Lane)), LaneHeroes),
-    length(LaneHeroes, Count).
+    count_specified_lane_in_team(Lane, Team, Count).
 
 % Cek apakah lane sudah terpenuhi dalam tim (minimal 1)
 lane_terpenuhi(Lane, Team) :-
@@ -148,7 +146,8 @@ is_counter_pick(Hero, EnemyHeroes) :-
 % Cek kompatibilitas dengan tim
 good_synergy_with_team(Hero, Team) :-
     Team \= [],
-    member(TeamMate, Team),
+    member(TeamMateLane, Team),
+    extract_hero(TeamMateLane, TeamMate),
     compatible(Hero, TeamMate).
 
 % Cek keseimbangan damage type
@@ -157,9 +156,11 @@ has_damage_balance(Team) :-
     Len =< 1,
     !.
 has_damage_balance(Team) :-
-    member(H1, Team), 
+    member(HeroLane1, Team),
+    extract_hero(HeroLane1, H1),
     memiliki_damage_type(H1, physical),
-    member(H2, Team), 
+    member(HeroLane2, Team),
+    extract_hero(HeroLane2, H2), 
     memiliki_damage_type(H2, magic).
 
 % Cek hero jungle dalam tim
@@ -171,6 +172,7 @@ get_jungle_hero(Team, JungleHero) :-
     memiliki_lane(JungleHero, jungle).
 
 % Cek hero roam dalam tim
+get_roam_hero(Team, RoamHero) :-
     member(RoamHero-roam, Team), !.
 get_roam_hero(Team, RoamHero) :-
     member(RoamHero, Team),
@@ -317,12 +319,18 @@ check_jungle_roam_bonus(_, _, _, 0).
 % Helper untuk bonus keseimbangan damage
 check_damage_balance_bonus(Hero, TeamHeroes, 8) :-
     % Jika tim kekurangan magic damage dan hero adalah mage
-    \+ (member(TeamMate, TeamHeroes), memiliki_damage_type(TeamMate, magic)),
+    \+ ( member(TeamMateLane, TeamHeroes),
+         extract_hero(TeamMateLane, TeamMate),
+         memiliki_damage_type(TeamMate, magic)
+       ),
     memiliki_damage_type(Hero, magic),
     !.
 check_damage_balance_bonus(Hero, TeamHeroes, 8) :-
     % Jika tim kekurangan physical damage dan hero adalah physical
-    \+ (member(TeamMate, TeamHeroes), memiliki_damage_type(TeamMate, physical)),
+    \+ ( member(TeamMateLane, TeamHeroes),
+         extract_hero(TeamMateLane, TeamMate),
+         memiliki_damage_type(TeamMate, physical)
+       ),
     memiliki_damage_type(Hero, physical),
     !.
 check_damage_balance_bonus(_, _, 0).
